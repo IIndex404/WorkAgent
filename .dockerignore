@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+.git
+.idea
+.vscode
+__pycache__
+*.pyc
+.pytest_cache
+pgdata
+.venv
+app/static/avatars
+*.log
+*.dump
+本地部署说明.md
+docs/screenshots

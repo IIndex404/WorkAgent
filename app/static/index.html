@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WorkAgent | 企业内部业务智能体</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+<script src="/static/vendor/vue.global.prod.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f5f7fb; height: 100vh; }
+
+  /* ===== 登录/注册页 ===== */
+  .auth-wrap { height: 100vh; display: flex; align-items: center; justify-content: center;
+               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+  .auth-card { background: #fff; border-radius: 16px; padding: 36px 32px; width: 380px;
+               box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  .auth-card .logo { font-size: 26px; text-align: center; margin-bottom: 6px; }
+  .auth-card h2 { text-align: center; color: #1f2937; margin-bottom: 4px; }
+  .auth-card .sub { text-align: center; color: #9ca3af; font-size: 13px; margin-bottom: 22px; }
+  .auth-tabs { display: flex; background: #f3f4f6; border-radius: 10px; padding: 4px; margin-bottom: 20px; }
+  .auth-tabs button { flex: 1; padding: 8px; border: none; border-radius: 8px; background: transparent;
+                      cursor: pointer; font-size: 14px; color: #6b7280; transition: all .2s; }
+  .auth-tabs button.active { background: #fff; color: #4f46e5; font-weight: bold;
+                             box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; color: #374151; margin-bottom: 6px; font-weight: 500; }
+  .field input { width: 100%; padding: 11px 14px; border: 1.5px solid #e5e7eb; border-radius: 10px;
+                 font-size: 14px; outline: none; transition: border-color .2s; }
+  .field input:focus { border-color: #4f46e5; }
+  .btn-login { width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer;
+               font-size: 15px; font-weight: 600; color: #fff;
+               background: linear-gradient(135deg, #4f46e5, #7c3aed); transition: opacity .2s; }
+  .btn-login:hover { opacity: .9; }
+  .err-msg { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px;
+             padding: 8px 12px; font-size: 13px; margin-bottom: 14px; display: none; }
+  .err-msg.show { display: block; }
+  .auth-tip { text-align: center; color: #9ca3af; font-size: 12px; margin-top: 16px; }
+
+  /* ===== 聊天主界面 ===== */
+  .chat-wrap { display: none; height: 100vh; flex-direction: column; }
+  .chat-wrap.show { display: flex; }
+  .header { background: #fff; padding: 12px 24px; display: flex; align-items: center;
+            justify-content: space-between; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .header .logo { font-size: 17px; font-weight: 700; color: #1f2937; }
+  .header .logo span { color: #4f46e5; }
+  .header .right { display: flex; align-items: center; gap: 12px; }
+  .user-chip { background: #eef2ff; color: #4f46e5; padding: 5px 12px; border-radius: 20px;
+               font-size: 13px; font-weight: 500; }
+  .btn { padding: 7px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px;
+         transition: opacity .2s; }
+  .btn:hover { opacity: .85; }
+  .btn-ghost { background: #f3f4f6; color: #374151; }
+  .btn-primary { background: #4f46e5; color: #fff; }
+  .btn-success { background: #16a34a; color: #fff; }
+  .btn-danger { background: #dc2626; color: #fff; }
+  .toolbar { display: flex; gap: 10px; padding: 10px 24px; align-items: center; }
+  .toolbar select { padding: 6px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+                    font-size: 13px; outline: none; }
+  .messages { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .msg { max-width: 72%; padding: 12px 16px; border-radius: 14px; font-size: 14px;
+         line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+  .msg.user { align-self: flex-end; background: linear-gradient(135deg, #4f46e5, #6d28d9);
+              color: #fff; border-bottom-right-radius: 4px; }
+  .msg.ai { align-self: flex-start; background: #fff; border: 1px solid #e5e7eb;
+            border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+  .msg.error { align-self: flex-start; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+  .approval-card { align-self: flex-start; max-width: 72%; background: #fffbeb;
+    border: 1px solid #fcd34d; border-radius: 14px; padding: 14px 18px; font-size: 14px; }
+  .approval-card .title { font-weight: 700; color: #92400e; margin-bottom: 6px; }
+  .approval-card .detail { color: #78350f; margin-bottom: 12px; word-break: break-all; font-size: 13px; }
+  .approval-card .actions { display: flex; gap: 8px; }
+  .input-bar { display: flex; gap: 10px; padding: 14px 24px; background: #fff;
+               border-top: 1px solid #e5e7eb; }
+  .input-bar input { flex: 1; padding: 12px 16px; border: 1.5px solid #e5e7eb; border-radius: 24px;
+                     font-size: 14px; outline: none; transition: border-color .2s; }
+  .input-bar input:focus { border-color: #4f46e5; }
+  .btn-send { padding: 12px 22px; border: none; border-radius: 24px; cursor: pointer;
+              color: #fff; font-size: 14px; font-weight: 600;
+              background: linear-gradient(135deg, #4f46e5, #7c3aed); }
+  .btn-send:disabled { opacity: .6; cursor: not-allowed; }
+  .typing::after { content: "…"; animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ===== 消息头像与时间戳 ===== */
+  .msg-row { display: flex; gap: 10px; align-items: flex-start; }
+  .msg-row.user-row { flex-direction: row-reverse; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 18px;
+            overflow: hidden; }
+  .avatar.ai { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; }
+  .avatar.user { background: linear-gradient(135deg, #0ea5e9, #2563eb); color: #fff; }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .mini-avatar { width: 18px; height: 18px; border-radius: 50%; display: inline-block;
+                 vertical-align: -3px; overflow: hidden; }
+  .mini-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .msg-col { max-width: 72%; display: flex; flex-direction: column; }
+  .user-row .msg-col { align-items: flex-end; }
+  .msg { padding: 12px 16px; border-radius: 14px; font-size: 14px;
+         line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+  .msg.user { background: linear-gradient(135deg, #4f46e5, #6d28d9); color: #fff;
+              border-bottom-right-radius: 4px; }
+  .msg.ai { background: #fff; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+  .msg.error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+  .msg-time { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+
+  /* ===== 个人信息弹窗 ===== */
+  .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.4);
+                display: none; align-items: center; justify-content: center; z-index: 200; }
+  .modal-mask.show { display: flex; }
+  .modal { background: #fff; border-radius: 16px; padding: 28px; width: 320px;
+           text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  .modal .big-avatar { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 12px;
+                       display: flex; align-items: center; justify-content: center;
+                       font-size: 30px; color: #fff; background: linear-gradient(135deg, #0ea5e9, #2563eb);
+                       overflow: hidden; }
+  .modal .big-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .modal .name { font-size: 18px; font-weight: 700; color: #1f2937; }
+  .modal .role-badge { display: inline-block; margin-top: 6px; padding: 3px 12px; border-radius: 12px;
+                       font-size: 12px; background: #eef2ff; color: #4f46e5; }
+  .avatar-picker { margin-top: 14px; }
+  .avatar-picker .label { font-size: 12px; color: #6b7280; margin-bottom: 8px; text-align: left; }
+  .avatar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .avatar-grid button { font-size: 18px; padding: 6px 0; border: 1px solid #e5e7eb;
+                        border-radius: 8px; background: #fff; cursor: pointer; }
+  .avatar-grid button:hover { background: #eef2ff; border-color: #4f46e5; }
+  .avatar-grid button.active { background: #eef2ff; border-color: #4f46e5; }
+  .upload-btn { width: 100%; margin-top: 10px; padding: 9px; border: 1px dashed #4f46e5;
+                border-radius: 10px; background: #eef2ff; color: #4f46e5; cursor: pointer;
+                font-size: 13px; }
+  .modal .info-list { margin-top: 18px; text-align: left; font-size: 13px; color: #374151; }
+  .modal .info-list div { padding: 8px 0; border-bottom: 1px solid #f3f4f6;
+                          display: flex; justify-content: space-between; }
+  .modal .info-list span:last-child { color: #6b7280; word-break: break-all; }
+  .modal .close { margin-top: 18px; width: 100%; padding: 10px; border: none; border-radius: 10px;
+                  background: #f3f4f6; color: #374151; cursor: pointer; font-size: 14px; }
+  .msg-col .msg { max-width:100%; }
+  .source-list { margin-top:9px; padding:10px 12px; border:1px solid #dbeafe; border-radius:10px; background:#f8faff; font-size:12px; color:#334155; }
+  .source-list .source-title { font-weight:600; margin-bottom:6px; color:#4338ca; }
+  .source-list details { padding:5px 0; }
+  .source-list summary { cursor:pointer; color:#4338ca; }
+  .source-list p { white-space:pre-wrap; line-height:1.7; margin-top:8px; }
+  .toolbar { flex-wrap:wrap; }
+  .leave-page { flex:1; min-height:0; overflow:auto; padding:12px 24px 24px; }
+  .leave-heading { margin:8px 0 18px; color:#1f2937; }
+  .leave-heading p { font-size:13px; color:#64748b; margin-top:6px; }
+  .leave-grid { display:grid; grid-template-columns:minmax(260px,350px) minmax(0,1fr); gap:20px; align-items:start; }
+  .leave-card { padding:22px; background:white; border:1px solid #e5e7eb; border-radius:14px; }
+  .leave-card h3 { font-size:16px; margin-bottom:16px; color:#1f2937; }
+  .leave-card label { display:block; font-size:13px; color:#475569; margin:12px 0 6px; }
+  .leave-card input,.leave-card select,.leave-card textarea { width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font:inherit; font-size:14px; }
+  .leave-card textarea { resize:vertical; min-height:100px; }
+  .leave-card .btn-primary { margin-top:16px; width:100%; padding:11px; }
+  .leave-help,.leave-meta { font-size:12px; color:#64748b; line-height:1.8; }
+  .leave-help { margin-top:10px; }
+  .leave-list-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:10px; }
+  .leave-list-head h3 { margin:0; }
+  .leave-record { padding:15px 0; border-top:1px solid #e5e7eb; }
+  .leave-record:first-of-type { border-top:0; }
+  .leave-record-header { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:7px; }
+  .leave-reason { white-space:pre-wrap; word-break:break-word; font-size:14px; color:#334155; line-height:1.7; margin:8px 0; }
+  .leave-status { font-size:12px; border-radius:14px; padding:4px 10px; white-space:nowrap; }
+  .leave-status.pending { background:#fef3c7; color:#92400e; }
+  .leave-status.approved { background:#dcfce7; color:#166534; }
+  .leave-status.rejected { background:#fee2e2; color:#991b1b; }
+  .leave-feedback { padding:10px 12px; border-radius:8px; background:#f8fafc; font-size:13px; line-height:1.7; margin-top:8px; white-space:pre-wrap; }
+  .leave-banner { padding:12px; margin-bottom:14px; border-radius:9px; font-size:13px; }
+  .leave-banner.error { background:#fef2f2; color:#b91c1c; }
+  .leave-banner.success { background:#f0fdf4; color:#166534; }
+  @media(max-width:850px) { .leave-grid { grid-template-columns:1fr; } .header { padding:12px; gap:8px; } .header .right { gap:5px; flex-wrap:wrap; justify-content:flex-end; } .leave-page { padding:12px; } .toolbar { padding:10px 12px; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ===== 登录/注册（未登录时显示）===== -->
+  <div v-if="!token" class="auth-wrap">
+    <div class="auth-card">
+      <div class="logo">🤖</div>
+      <h2>WorkAgent</h2>
+      <div class="sub">登录后开始使用 · 未注册可先注册</div>
+      <div class="auth-tabs">
+        <button :class="{ active: authTab === 'login' }" @click="authTab='login'">登录</button>
+        <button :class="{ active: authTab === 'register' }" @click="authTab='register'">注册</button>
+      </div>
+      <div class="err-msg" :class="{ show: errMsg }">{{ errMsg }}</div>
+      <div class="field"><label>用户名</label><input v-model="formUser" @keydown.enter="submitAuth" placeholder="请输入用户名"></div>
+      <div class="field"><label>密码</label><input v-model="formPass" type="password" @keydown.enter="submitAuth" :placeholder="authTab === 'register' ? '至少3位' : '请输入密码'"></div>
+      <button class="btn-login" @click="submitAuth">{{ authTab === 'login' ? '登 录' : '注 册' }}</button>
+      <div class="auth-tip">请使用管理员提供的账号登录，或注册普通账号。</div>
+    </div>
+  </div>
+
+  <!-- ===== 聊天主界面（登录后显示）===== -->
+  <div v-else class="chat-wrap show">
+    <div class="header">
+      <div class="logo">Work<span>Agent</span><small style="display:block;font-size:11px;font-weight:400;color:#64748b;margin-top:2px">企业内部业务智能体</small></div>
+      <div class="right">
+        <a v-if="role === 'admin'" href="/admin" style="font-size:13px;color:#4f46e5;text-decoration:none">管理后台 →</a>
+        <button class="btn btn-ghost" @click="openProfile" title="点击查看/更换头像">
+          <span class="mini-avatar"><img v-if="avatarIsImage" :src="avatar"></span>
+          <span v-if="!avatarIsImage">{{ userAvatar }}</span>
+          {{ username }}（{{ roleName }}）
+        </button>
+        <button class="btn btn-ghost" @click="logout">退出登录</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn" :class="view === 'chat' ? 'btn-primary' : 'btn-ghost'" @click="view = 'chat'">制度问答</button>
+      <button class="btn" :class="view === 'leave' ? 'btn-primary' : 'btn-ghost'" @click="showLeave">我的请假</button>
+      <template v-if="view === 'chat'">
+      <span style="font-size:13px;color:#6b7280">对话模式：</span>
+      <select v-model="mode">
+        <option value="chat">普通问答（RAG + 记忆 + 流式）</option>
+        <option value="agent">智能体（工具调用 + 审批）</option>
+      </select>
+      </template>
+    </div>
+
+    <div class="messages" ref="msgBox" v-show="view === 'chat'">
+      <div v-for="(m, i) in messages" :key="i" :class="['msg-row', m.role === 'user' ? 'user-row' : '']">
+        <div class="avatar" :class="m.role === 'user' ? 'user' : 'ai'">
+          <img v-if="m.role === 'user' && avatarIsImage" :src="avatar">
+          <span v-else>{{ m.role === 'user' ? userAvatar : '🤖' }}</span>
+        </div>
+        <div class="msg-col">
+          <div :class="['msg', m.role, { typing: m.typing }]">{{ m.text }}</div>
+          <div v-if="m.sources && m.sources.length" class="source-list">
+            <div class="source-title">参考资料 · 点击查看原文</div>
+            <details v-for="source in m.sources" :key="source.citation">
+              <summary>[{{ source.citation }}] {{ source.document_name }}</summary>
+              <p>{{ source.content }}</p>
+            </details>
+          </div>
+          <div class="msg-time">{{ m.time }}</div>
+        </div>
+      </div>
+      <div v-if="approval" class="approval-card">
+        <div class="title">⏳ 等待审批</div>
+        <div class="detail">{{ approval.message || JSON.stringify(approval.args || {}) }}</div>
+        <div class="actions">
+          <button class="btn btn-success" @click="decide(true)">✅ 批准</button>
+          <button class="btn btn-danger" @click="decide(false)">❌ 拒绝</button>
+        </div>
+      </div>
+    </div>
+
+    <section v-if="view === 'leave'" class="leave-page">
+      <div class="leave-heading"><h2>我的请假</h2><p>提交申请后等待管理员审批，在这里查看处理结果。</p></div>
+      <div v-if="leaveError" class="leave-banner error" role="alert">{{ leaveError }}</div>
+      <div v-if="leaveNotice" class="leave-banner success" role="status">{{ leaveNotice }}</div>
+      <div class="leave-grid">
+        <form class="leave-card" @submit.prevent="submitLeave">
+          <h3>提交请假申请</h3>
+          <label for="leave-type">请假类型</label>
+          <select id="leave-type" v-model="leaveForm.leave_type"><option>年假</option><option>事假</option><option>病假</option><option>调休</option></select>
+          <label for="leave-start">开始日期</label><input id="leave-start" type="date" v-model="leaveForm.start_date" required>
+          <label for="leave-end">结束日期</label><input id="leave-end" type="date" v-model="leaveForm.end_date" :min="leaveForm.start_date || undefined" required>
+          <label for="leave-reason">请假事由</label><textarea id="leave-reason" v-model="leaveForm.reason" minlength="2" maxlength="1000" placeholder="请简要说明请假事由" required></textarea>
+          <p class="leave-help">天数按自然日计算，包含开始和结束日期；本系统不自动扣减年假余额。</p>
+          <button class="btn btn-primary" type="submit" :disabled="leaveSending">{{ leaveSending ? '提交中…' : '提交申请' }}</button>
+        </form>
+        <div class="leave-card">
+          <div class="leave-list-head"><h3>我的申请记录</h3><button class="btn btn-ghost" @click="loadLeaves" :disabled="leaveLoading">{{ leaveLoading ? '加载中…' : '刷新结果' }}</button></div>
+          <p v-if="!leaveItems.length && !leaveLoading" class="leave-help">还没有请假申请，提交后会在这里显示。</p>
+          <article v-for="item in leaveItems" :key="item.id" class="leave-record">
+            <div class="leave-record-header"><strong>#{{ item.id }} · {{ item.leave_type }}</strong><span class="leave-status" :class="item.status">{{ leaveStatus(item.status) }}</span></div>
+            <div class="leave-meta">{{ item.start_date }} 至 {{ item.end_date }} · {{ item.days }} 天</div>
+            <div class="leave-reason">{{ item.reason }}</div>
+            <div class="leave-meta">提交时间：{{ displayTime(item.created_at) }}</div>
+            <div v-if="item.status !== 'pending'" class="leave-feedback">审批人：{{ item.reviewed_by }}<br>审批时间：{{ displayTime(item.reviewed_at) }}<br>审批意见：{{ item.review_comment || '同意申请' }}</div>
+            <div v-else class="leave-help">已提交，等待管理员处理。</div>
+          </article>
+          <div v-if="leaveItems.length" class="leave-list-head"><button class="btn btn-ghost" :disabled="leavePage === 0 || leaveLoading" @click="leavePage--; loadLeaves()">上一页</button><span class="leave-meta">第 {{ leavePage + 1 }} 页</span><button class="btn btn-ghost" :disabled="leaveItems.length < 20 || leaveLoading" @click="leavePage++; loadLeaves()">下一页</button></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="input-bar" v-show="view === 'chat'">
+      <input v-model="input" placeholder="输入消息，回车发送…" @keydown.enter="send">
+      <button class="btn-send" @click="send" :disabled="sending">{{ sending ? '回复中…' : '发送' }}</button>
+    </div>
+  </div>
+
+  <!-- 个人信息弹窗 -->
+  <div class="modal-mask" :class="{ show: showProfile }" @click.self="showProfile = false">
+    <div class="modal">
+      <div class="big-avatar" :style="role === 'admin' ? 'background:linear-gradient(135deg,#f59e0b,#d97706)' : 'background:linear-gradient(135deg,#0ea5e9,#2563eb)'">
+        <img v-if="avatarIsImage" :src="avatar">
+        <span v-else>{{ userAvatar }}</span>
+      </div>
+      <div class="name">{{ username }}</div>
+      <span class="role-badge">{{ roleName }}</span>
+      <div class="info-list">
+        <div><span>用户名</span><span>{{ username }}</span></div>
+        <div><span>角色</span><span>{{ roleName }}</span></div>
+        <div><span>注册时间</span><span>{{ profile.created_at || '-' }}</span></div>
+        <div><span>会话编号</span><span>{{ sessionId }}</span></div>
+      </div>
+      <!-- 头像选择 -->
+      <div class="avatar-picker">
+        <div class="label">选择头像：</div>
+        <div class="avatar-grid">
+          <button v-for="a in avatars" :key="a" @click="changeAvatar(a)"
+                  :class="{ active: !avatarIsImage && avatar === a }">{{ a }}</button>
+        </div>
+        <input ref="avatarFile" type="file" accept="image/*" style="display:none" @change="onAvatarFile">
+        <button class="upload-btn" @click="$refs.avatarFile.click()">📷 上传照片（png/jpg，≤2MB）</button>
+      </div>
+      <button class="close" @click="showProfile = false">关 闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+createApp({
+  data() {
+    return {
+      token: localStorage.getItem("token") || "",
+      role: localStorage.getItem("role") || "",
+      username: localStorage.getItem("username") || "",
+      avatar: localStorage.getItem("avatar") || "👤",   // 用户自定义头像
+      sessionId: localStorage.getItem("session_id") || ("web_" + Math.random().toString(36).slice(2, 10)),
+      authTab: "login",
+      formUser: "", formPass: "", errMsg: "",
+      messages: [], mode: "chat", input: "", sending: false,
+      view: "chat", leaveItems: [], leaveLoading: false, leaveSending: false, leavePage: 0,
+      leaveError: "", leaveNotice: "",
+      leaveForm: { leave_type: "年假", start_date: "", end_date: "", reason: "" },
+      approval: null, approvalThreadId: "",
+      showProfile: false, profile: { created_at: "" },
+      avatars: ["👤", "👩", "👨", "🧑", "👦", "👧", "🦸", "🧙", "👑", "🤖", "🦊", "🐱", "🐼", "😎"],
+    };
+  },
+  mounted() {
+    localStorage.setItem("session_id", this.sessionId);
+    if (this.token) {
+      // 欢迎语按角色显示：管理员可提示审批流程；员工提示 RAG 问答即可
+      if (this.role === "admin") {
+        this.pushAi("欢迎回来，" + this.username + "（管理员）！制度回答可查看资料出处；请假申请可到后台审批。");
+      } else {
+        this.pushAi("欢迎回来，" + this.username + "！可以查询公司制度并核对出处，或到“我的请假”提交申请、查看审批结果。");
+      }
+    }
+  },
+  computed: {
+    // 用户自定义头像：图片路径(/static/avatars/..) 或 emoji
+    userAvatar() { return this.avatar || "👤"; },
+    avatarIsImage() { return this.avatar && this.avatar.startsWith("/"); },
+    roleName() { return this.role === "admin" ? "管理员" : "员工"; },
+  },
+  methods: {
+    leaveStatus(status) { return { pending: "待审批", approved: "已批准", rejected: "已驳回" }[status] || status; },
+    displayTime(value) { return value ? new Date(value + (/[zZ]|[+-]\d\d:\d\d$/.test(value) ? "" : "Z")).toLocaleString('zh-CN', { hour12: false }) : '-'; },
+    showLeave() { this.view = "leave"; this.leavePage = 0; this.loadLeaves(); },
+    async leaveRequest(path, options = {}) {
+      const res = await fetch(path, { ...options, headers: { Authorization: "Bearer " + this.token, "Content-Type": "application/json", ...(options.headers || {}) } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(this.fmtErr(data) || "请求失败，请重试");
+      return data;
+    },
+    async loadLeaves() {
+      const token = this.token;
+      this.leaveLoading = true; this.leaveError = ""; this.leaveNotice = "";
+      try { const items = await this.leaveRequest(`/leave/requests?limit=20&offset=${this.leavePage * 20}`); if (this.token === token) this.leaveItems = items; }
+      catch (e) { if (this.token === token) this.leaveError = e.message; }
+      finally { if (this.token === token) this.leaveLoading = false; }
+    },
+    async submitLeave() {
+      if (this.leaveSending) return;
+      const token = this.token;
+      this.leaveError = ""; this.leaveNotice = ""; this.leaveSending = true;
+      try {
+        const item = await this.leaveRequest('/leave/requests', { method: 'POST', body: JSON.stringify(this.leaveForm) });
+        if (this.token !== token) return;
+        this.leaveForm.reason = ""; this.leavePage = 0;
+        await this.loadLeaves();
+        if (this.token === token) this.leaveNotice = `申请 #${item.id} 已提交，等待管理员审批。`;
+      } catch (e) { if (this.token === token) this.leaveError = e.message; }
+      finally { if (this.token === token) this.leaveSending = false; }
+    },
+    now() {
+      return new Date().toTimeString().slice(0, 5);   // HH:MM
+    },
+    // ---------- 认证 ----------
+    async submitAuth() {
+      this.errMsg = "";
+      if (!this.formUser.trim() || !this.formPass) { this.errMsg = "请填写用户名和密码"; return; }
+      if (this.authTab === "register" && this.formPass.length < 3) { this.errMsg = "密码至少 3 位"; return; }
+      if (this.authTab === "login") await this.login();
+      else await this.register();
+    },
+    async login() {
+      const body = new URLSearchParams({ username: this.formUser, password: this.formPass });
+      const res = await fetch("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      });
+      const data = await res.json();
+      if (!res.ok) { this.errMsg = this.fmtErr(data); return; }
+      this.token = data.access_token; this.role = data.role; this.username = data.username;
+      this.avatar = data.avatar || "👤";
+      localStorage.setItem("token", this.token);
+      localStorage.setItem("role", this.role);
+      localStorage.setItem("username", this.username);
+      localStorage.setItem("avatar", this.avatar);
+      this.formUser = ""; this.formPass = "";
+      // 拉取个人信息（注册时间）供头像弹窗用
+      fetch("/auth/me", { headers: { Authorization: "Bearer " + this.token } })
+        .then(r => r.json())
+        .then(d => { this.profile.created_at = d.created_at || ""; })
+        .catch(() => {});
+      this.pushAi("登录成功！" + (this.role === "admin" ? "你是管理员，可审批、可进管理后台。" : ""));
+    },
+    async register() {
+      const res = await fetch("/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: this.formUser, password: this.formPass }),
+      });
+      const data = await res.json();
+      if (!res.ok) { this.errMsg = this.fmtErr(data); return; }
+      this.errMsg = ""; this.authTab = "login";
+      alert("注册成功！请登录");
+    },
+    fmtErr(data) {
+      if (Array.isArray(data.detail)) return data.detail.map(d => d.msg || "参数错误").join("；");
+      return data.detail || "请求失败";
+    },
+    logout() {
+      this.token = ""; this.role = ""; this.username = ""; this.avatar = "👤";
+      localStorage.removeItem("token"); localStorage.removeItem("role");
+      localStorage.removeItem("username"); localStorage.removeItem("avatar");
+      this.messages = [];
+      this.view = "chat"; this.leaveItems = []; this.leaveError = ""; this.leaveNotice = "";
+      this.leaveLoading = false; this.leaveSending = false;
+      this.leaveForm = { leave_type: "年假", start_date: "", end_date: "", reason: "" };
+    },
+    // ---------- 消息 ----------
+    pushAi(text) { this.messages.push({ role: "ai", text, time: this.now() }); this.scroll(); },
+    openProfile() {
+      fetch("/auth/me", { headers: { Authorization: "Bearer " + this.token } })
+        .then(r => r.json())
+        .then(d => {
+          this.profile.created_at = d.created_at || "";
+          if (d.avatar) { this.avatar = d.avatar; localStorage.setItem("avatar", d.avatar); }
+        })
+        .catch(() => {});
+      this.showProfile = true;
+    },
+    // 切换 emoji 头像
+    async changeAvatar(a) {
+      const res = await fetch("/auth/me/avatar", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + this.token },
+        body: JSON.stringify({ avatar: a }),
+      });
+      if (res.ok) { this.avatar = a; localStorage.setItem("avatar", a); }
+    },
+    // 上传照片头像
+    async onAvatarFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/auth/me/avatar/upload", {
+        method: "POST", headers: { Authorization: "Bearer " + this.token }, body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.detail || "上传失败"); return; }
+      this.avatar = data.avatar;
+      localStorage.setItem("avatar", data.avatar);
+    },
+    scroll() { this.$nextTick(() => { const el = this.$refs.msgBox; if (el) el.scrollTop = el.scrollHeight; }); },
+    async send() {
+      const msg = this.input.trim();
+      if (!msg || this.sending) return;
+      this.input = ""; this.approval = null;
+      this.messages.push({ role: "user", text: msg, time: this.now() });
+      if (this.mode === "chat") await this.sendChat(msg);
+      else await this.sendAgent(msg);
+    },
+    // 普通问答：SSE 流式（打字机）
+    async sendChat(msg) {
+      this.sending = true;
+      this.messages.push({ role: "ai", text: "", sources: [], typing: true, time: this.now() });
+      try {
+        const res = await fetch("/chat/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: msg, session_id: this.sessionId }),
+        });
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(typeof error.detail === "string" ? error.detail : `服务请求失败（${res.status}）`);
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "", full = "", ended = false;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split(/\r?\n\r?\n/);
+          buffer = parts.pop();
+          for (const part of parts) {
+            const lines = part.split(/\r?\n/);
+            const event = (lines.find(l => l.startsWith("event:")) || "event: message").slice(6).trim();
+            const data = lines.filter(l => l.startsWith("data:")).map(l => l.slice(5).replace(/^ /, "")).join("\n");
+            if (event === "error") {
+              let error;
+              try { error = JSON.parse(data); } catch (_) { error = { message: data }; }
+              throw new Error(error.message || "回答生成失败，请稍后重试");
+            }
+            if (event === "end") ended = true;
+            if (event === "sources") this.messages[this.messages.length - 1].sources = JSON.parse(data);
+            if (event === "message" && data) {
+              full += JSON.parse(data);
+              const last = this.messages[this.messages.length - 1];
+              last.text = full; last.typing = true;
+              this.scroll();
+            }
+          }
+        }
+        this.messages[this.messages.length - 1].typing = false;
+        if (!ended) throw new Error("回答连接已中断，请重试");
+        if (!full) this.messages[this.messages.length - 1].text = "（无回复）";
+      } catch (e) {
+        const last = this.messages[this.messages.length - 1];
+        last.text = "请求失败：" + e.message; last.role = "error"; last.typing = false;
+      }
+      this.sending = false; this.scroll();
+    },
+    // 智能体
+    async sendAgent(msg) {
+      this.sending = true;
+      try {
+        const res = await fetch("/chat/agent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + this.token },
+          body: JSON.stringify({ message: msg, session_id: this.sessionId }),
+        });
+        const data = await res.json();
+        if (data.status === "awaiting_approval") {
+          this.approval = data.approval; this.approvalThreadId = data.session_id;
+        } else {
+          this.pushAi(data.reply || JSON.stringify(data));
+        }
+      } catch (e) { this.pushAi("请求失败：" + e.message); }
+      this.sending = false;
+    },
+    async decide(approve) {
+      const res = await fetch("/chat/agent/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + this.token },
+        body: JSON.stringify({ thread_id: this.approvalThreadId, approve }),
+      });
+      const data = await res.json();
+      if (res.status === 403) { this.pushAi("需要管理员权限，请用 admin 登录"); return; }
+      this.approval = null;
+      this.pushAi(data.reply || "已处理");
+    },
+  },
+}).mount("#app");
+</script>
+</body>
+</html>

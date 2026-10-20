@@ -1,0 +1,55 @@
+name: workagent
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: workagent
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在.env设置POSTGRES_PASSWORD}
+      POSTGRES_DB: workagent
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workagent -d workagent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  embedding:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.8
+    restart: unless-stopped
+    command: ["--model-id", "BAAI/bge-small-zh-v1.5", "--port", "80", "--max-client-batch-size", "16", "--auto-truncate"]
+    volumes:
+      - embedding_cache:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 120s
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://workagent:${POSTGRES_PASSWORD}@postgres:5432/workagent
+      JWT_SECRET: ${JWT_SECRET:?请在.env设置JWT_SECRET}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?请在.env设置ADMIN_PASSWORD}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./app/static/avatars:/app/app/static/avatars
+    depends_on:
+      postgres:
+        condition: service_healthy
+      embedding:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 10s
+      timeout: 6s
+      retries: 10
+      start_period: 30s
+volumes:
+  postgres_data:
+  embedding_cache:
