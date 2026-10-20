@@ -1,6 +1,6 @@
-# 来源与第三方代码
+# 第三方依赖许可
 
-WorkAgent 基于 Xiong-Zi-Long/langchain-langgraph-tutorial 的 04-Agent实战修改。原项目使用 MIT 许可证，版权声明保留在 LICENSE。
+本文件记录随 WorkAgent 分发的第三方依赖及其许可。WorkAgent 由 IIndex404 独立开发。
 
 前端随项目保存了 Vue 3.4.38 的压缩发行文件，位于 app/static/vendor/vue.global.prod.js。
 

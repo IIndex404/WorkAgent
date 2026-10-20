@@ -1,8 +1,8 @@
 # WorkAgent | 企业内部业务智能体
 
-项目开发与维护：[IIndex404](https://github.com/IIndex404)
+本项目由 [IIndex404](https://github.com/IIndex404) 独立开发并维护。
 
-开源许可：MIT。第三方代码来源见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+开源许可：MIT。随项目分发的第三方依赖许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 Git 克隆、提交与推送操作见 [Git 使用说明](docs/git-workflow.md)。
 
@@ -116,7 +116,7 @@ tests/           接口、权限、检索和流式问答测试
 docker compose exec app python -m pytest -q --disable-warnings
 ```
 
-目前回归测试为 **45 项通过、3 项跳过**。覆盖了申请人隔离、审批权限、日期校验、重叠申请、重复审批、引用来源、流式错误和对话记忆。跳过的是原项目默认关闭的三个文档集成测试。
+目前回归测试为 **45 项通过、3 项跳过**。覆盖了申请人隔离、审批权限、日期校验、重叠申请、重复审批、引用来源、流式错误和对话记忆。跳过的是默认关闭的三个文档集成测试。
 
 真实接口另验证过：本地 BGE 检索、DeepSeek 带引用回答，以及两个审批请求同时处理同一申请时只有一个生效。网页也走过了提交、审批、刷新后查看结果的流程。
 
